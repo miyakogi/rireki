@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+import sys
 import os
 import atexit
 from argparse import ArgumentParser
@@ -64,10 +65,18 @@ class FileWatcher(object):
         self.watch()
 
 
-@atexit.register
 def cleanup():
     if lock_file.exists():
         lock_file.unlink()
+
+
+def status():
+    if lock_file.exists():
+        print('running')
+        sys.exit(0)
+    else:
+        print('not running')
+        sys.exit(1)
 
 
 def stop():
@@ -83,6 +92,7 @@ def start():
     if lock_file.exists():
         stop()
     lock_file.write_text(str(os.getpid()))
+    atexit.register(cleanup)
     loop = asyncio.get_event_loop()
     f = os.environ.get('HIST_DIRS_FILE')
     if f:
@@ -101,9 +111,10 @@ def main():
     sub_persers = parser.add_subparsers()
     sub_persers.add_parser('start').set_defaults(func=start)
     sub_persers.add_parser('stop').set_defaults(func=stop)
+    sub_persers.add_parser('status').set_defaults(func=status)
     args = parser.parse_args()
     if 'func' not in args:
-        print('Argument {strat,stop} required.')
+        print('Argument {strat,stop,status} required.')
         import sys
         sys.exit(1)
     else:
